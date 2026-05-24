@@ -79,10 +79,22 @@ module.exports = (env, argv) => {
       })
     ],
     devServer: {
-      static: './dist',
+      static: {
+        directory: path.join(__dirname, 'dist'),
+      },
       hot: true,
       port: 8090,
-      open: true
+      open: true,
+      historyApiFallback: true,
+      proxy: [
+        {
+          context: ['/api'],
+          target: 'http://localhost:8080',
+          changeOrigin: true,
+          secure: false,
+          pathRewrite: { '^/api': '' }
+        }
+      ]
     },
     resolve: {
       alias: {

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "智慧监控AI平台大屏项目",
   "scripts": {
-    "dev": "webpack-dev-server --open --hot",
+    "dev": "webpack serve",
     "build": "webpack --mode production"
   },
   "dependencies": {
