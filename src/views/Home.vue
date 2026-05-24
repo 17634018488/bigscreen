@@ -16,7 +16,7 @@
           <MapArea />
         </section>
         <aside class="right-panel">
-          <ProjectInfo />
+          <ProjectInfo @projects-loaded="handleProjectsLoaded" />
           <EventChart />
         </aside>
       </main>
@@ -43,8 +43,10 @@ export default {
   data () {
     return {
       map: null,
-      center: [116.40769, 39.89945],
-      zoom: 12
+      center: [113.32459, 23.12911],
+      zoom: 10,
+      projects: [],
+      markers: []
     }
   },
   mounted () {
@@ -63,6 +65,53 @@ export default {
     }
   },
   methods: {
+    handleProjectsLoaded (projects) {
+      this.projects = projects
+      if (this.map) {
+        this.addProjectMarkers()
+      }
+    },
+
+    addProjectMarkers () {
+      // 清除旧标记
+      this.markers.forEach(marker => {
+        this.map.removeOverLay(marker)
+      })
+      this.markers = []
+
+      if (!this.projects || this.projects.length === 0) return
+
+      const points = []
+      this.projects.forEach(project => {
+        if (project.longitude && project.latitude) {
+          const lnglat = new window.T.LngLat(project.longitude, project.latitude)
+          const marker = new window.T.Marker(lnglat)
+          
+          // 添加信息窗口
+          const content = `
+            <div style="color:#000;padding:10px;">
+              <h4 style="margin:0 0 5px 0;">${project.name}</h4>
+              <p style="margin:0;font-size:12px;">状态: ${project.status}</p>
+              <p style="margin:0;font-size:12px;">单位: ${project.constructionUnit}</p>
+            </div>
+          `
+          const infoWindow = new window.T.InfoWindow(content, { offset: new window.T.Point(0, -30) })
+          marker.addEventListener('click', () => {
+            marker.openInfoWindow(infoWindow)
+          })
+
+          this.map.addOverLay(marker)
+          this.markers.push(marker)
+          points.push(lnglat)
+        }
+      })
+
+      // 自动调整视野
+      if (points.length > 0) {
+        this.map.setViewport(points)
+      }
+    },
+
     initMap () {
       if (typeof window.T === 'undefined') {
         setTimeout(() => this.initMap(), 500)
@@ -79,6 +128,12 @@ export default {
       this.map.addControl(zoomCtrl)
 
       this.injectDarkStyles()
+
+      // 如果数据已经先加载好了，直接画点
+      if (this.projects.length > 0) {
+        this.addProjectMarkers()
+      }
+
       window.addEventListener('resize', this.handleResize)
     },
 

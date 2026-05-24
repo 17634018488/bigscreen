@@ -56,6 +56,7 @@ export default {
         const res = await getProjects()
         // 假设接口返回的是数组，或者在 request.js 中已经处理了 res.data
         this.projectList = res
+        this.$emit('projects-loaded', this.projectList)
       } catch (error) {
         console.error('获取项目列表失败，使用 Mock 数据展示:', error)
         // 调试用：如果接口未就绪，使用用户提供的 Mock 数据
@@ -121,6 +122,7 @@ export default {
             "contactPhone": "13500135005"
           }
         ]
+        this.$emit('projects-loaded', this.projectList)
       }
     },
     formatStatus(status) {
