@@ -97,7 +97,8 @@ export default {
       const typeMap = {
         'temperature': '温度异常',
         'motion': '移动侦测',
-        'fire': '烟火报警',
+        'fire': '火焰报警',
+        'smoke': '烟雾报警',
         'offline': '设备离线'
       }
       return typeMap[type] || type
