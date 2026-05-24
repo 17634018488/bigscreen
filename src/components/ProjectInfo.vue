@@ -13,18 +13,18 @@
           <div class="project-field">项目名称: {{ project.name }}</div>
         </div>
         <div class="project-row">
-          <div class="project-field">项目状态: {{ project.status }}</div>
+          <div class="project-field">项目状态: <span :class="'status-' + project.status">{{ formatStatus(project.status) }}</span></div>
         </div>
         <div class="project-row">
-          <div class="project-field">城建单位: {{ project.company }}</div>
+          <div class="project-field">城建单位: {{ project.constructionUnit }}</div>
         </div>
         <div class="project-row">
-          <div class="project-field">开工日期: {{ project.startDate }}</div>
-          <div class="project-field">竣工日期: {{ project.endDate }}</div>
+          <div class="project-field">开工日期: {{ project.startDate || '未定' }}</div>
+          <div class="project-field">竣工日期: {{ project.endDate || '未定' }}</div>
         </div>
         <div class="project-row">
-          <div class="project-field">项目联系人: {{ project.contact }}</div>
-          <div class="project-field">联系电话: {{ project.phone }}</div>
+          <div class="project-field">项目联系人: {{ project.contactPerson }}</div>
+          <div class="project-field">联系电话: {{ project.contactPhone }}</div>
         </div>
       </div>
     </div>
@@ -32,39 +32,98 @@
 </template>
 
 <script>
+import { getProjects } from '@/api/project'
+
 export default {
   name: 'ProjectInfo',
   data() {
     return {
-      projectList: [
-        {
-          name: '000472604726072',
-          company: '000472604726072',
-          status: '100472600',
-          startDate: '2026-05-05',
-          endDate: '2026-05-05',
-          contact: '甲某某',
-          phone: '000 0000 0000'
-        },
-        {
-          name: '000472604726072',
-          company: '000472604726072',
-          status: '100472600',
-          startDate: '2026-05-05',
-          endDate: '2026-05-05',
-          contact: '甲某某',
-          phone: '000 0000 0000'
-        },
-        {
-          name: '000472604726072',
-          company: '000472604726072',
-          status: '100472600',
-          startDate: '2026-05-05',
-          endDate: '2026-05-05',
-          contact: '甲某某',
-          phone: '000 0000 0000'
-        }
-      ]
+      projectList: []
+    }
+  },
+  created() {
+    this.fetchProjectList()
+  },
+  methods: {
+    async fetchProjectList() {
+      try {
+        const res = await getProjects()
+        // 假设接口返回的是数组，或者在 request.js 中已经处理了 res.data
+        this.projectList = res
+      } catch (error) {
+        console.error('获取项目列表失败，使用 Mock 数据展示:', error)
+        // 调试用：如果接口未就绪，使用用户提供的 Mock 数据
+        this.projectList = [
+          {
+            "id": 1001,
+            "name": "智慧园区安防监控项目",
+            "status": "active",
+            "longitude": 113.32459,
+            "latitude": 23.12911,
+            "constructionUnit": "中科智慧科技有限公司",
+            "startDate": "2025-03-01",
+            "endDate": "2025-12-31",
+            "contactPerson": "张工",
+            "contactPhone": "13800138001"
+          },
+          {
+            "id": 1002,
+            "name": "城市地下管廊监测系统",
+            "status": "active",
+            "longitude": 114.0654,
+            "latitude": 22.5478,
+            "constructionUnit": "市政工程集团",
+            "startDate": "2025-06-01",
+            "endDate": "2026-06-30",
+            "contactPerson": "李经理",
+            "contactPhone": "13900139002"
+          },
+          {
+            "id": 1003,
+            "name": "高层建筑消防预警平台",
+            "status": "planning",
+            "longitude": 113.2806,
+            "latitude": 23.125,
+            "constructionUnit": "消防科技工程公司",
+            "startDate": null,
+            "endDate": null,
+            "contactPerson": "王工",
+            "contactPhone": "13700137003"
+          },
+          {
+            "id": 1004,
+            "name": "老旧小区改造安防工程",
+            "status": "completed",
+            "longitude": 113.35,
+            "latitude": 23.11,
+            "constructionUnit": "安居建设有限公司",
+            "startDate": "2024-01-15",
+            "endDate": "2025-01-15",
+            "contactPerson": "赵经理",
+            "contactPhone": "13600136004"
+          },
+          {
+            "id": 1005,
+            "name": "港口码头智能监控系统",
+            "status": "active",
+            "longitude": 113.58,
+            "latitude": 22.48,
+            "constructionUnit": "港务局信息化中心",
+            "startDate": "2025-09-01",
+            "endDate": "2026-08-31",
+            "contactPerson": "陈工",
+            "contactPhone": "13500135005"
+          }
+        ]
+      }
+    },
+    formatStatus(status) {
+      const statusMap = {
+        'active': '进行中',
+        'planning': '规划中',
+        'completed': '已完成'
+      }
+      return statusMap[status] || status
     }
   }
 }
@@ -163,5 +222,15 @@ export default {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  .status-active {
+    color: #00ff88;
+  }
+  .status-planning {
+    color: #ffaa00;
+  }
+  .status-completed {
+    color: #00d4ff;
+  }
 }
 </style>
