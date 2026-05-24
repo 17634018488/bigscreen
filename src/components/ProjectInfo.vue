@@ -8,7 +8,7 @@
       </span>
     </div>
     <div class="project-content">
-      <div v-for="(project, index) in projectList" :key="index" class="project-item">
+      <div v-for="(project, index) in projectList" :key="index" class="project-item" @click="goToDetail(project)">
         <div class="project-row">
           <div class="project-field">项目名称: {{ project.name }}</div>
         </div>
@@ -45,6 +45,12 @@ export default {
     this.fetchProjectList()
   },
   methods: {
+    goToDetail(project) {
+      this.$router.push({
+        name: 'ProjectDetail',
+        params: { id: project.id }
+      })
+    },
     async fetchProjectList() {
       try {
         const res = await getProjects()
@@ -193,16 +199,23 @@ export default {
 }
 
 .project-item {
-  padding: 14px 10px;
-  border-bottom: 1px solid rgba(0, 212, 255, 0.08);
-  transition: background 0.3s;
+  background: rgba(0, 48, 100, 0.4);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  padding: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 10px;
 
   &:last-child {
-    border-bottom: none;
+    margin-bottom: 0;
   }
 
   &:hover {
-    background: rgba(0, 212, 255, 0.05);
+    background: rgba(0, 70, 150, 0.6);
+    border-color: rgba(0, 212, 255, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
 }
 
