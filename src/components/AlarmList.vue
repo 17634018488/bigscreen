@@ -10,11 +10,7 @@
       </span>
     </div>
     <div class="alarm-content">
-      <div
-        v-for="(alarm, index) in alarmList"
-        :key="index"
-        class="alarm-item"
-      >
+      <div v-for="(alarm, index) in alarmList" :key="index" class="alarm-item">
         <div class="alarm-row">
           <div class="alarm-device">{{ alarm.deviceName }}</div>
           <div class="alarm-type-wrap">
@@ -23,8 +19,8 @@
           </div>
         </div>
         <div class="alarm-row">
-          <div class="alarm-code">编号信息: {{ alarm.code }}</div>
-          <div class="alarm-time">状态时间: {{ alarm.time }}</div>
+          <div class="alarm-code">IP地址: {{ alarm.deviceIp }}</div>
+          <div class="alarm-time">报警时间: {{ alarm.time }}</div>
         </div>
       </div>
     </div>
@@ -32,23 +28,86 @@
 </template>
 
 <script>
+import { getAlarmRecords } from '@/api/project'
+
 export default {
   name: 'AlarmList',
-  data() {
+  data () {
     return {
-      alarmList: [
-        { deviceName: '设备名称: 000472604726672', code: '100472600', type: '报警类型: 严重', time: '2026-05-05', level: 'severe' },
-        { deviceName: '设备名称: 000472604726672', code: '100472600', type: '报警类型: 一般', time: '2026-05-05', level: 'normal' },
-        { deviceName: '设备名称: 000472604726672', code: '100472600', type: '报警类型: 一般', time: '2026-05-05', level: 'normal' },
-        { deviceName: '设备名称: 000472604726672', code: '100472600', type: '报警类型: 严重', time: '2026-05-05', level: 'severe' },
-        { deviceName: '设备名称: 000472604726672', code: '100472600', type: '报警类型: 中等', time: '2026-05-05', level: 'medium' },
-        { deviceName: '设备名称: 000472604726672', code: '100472600', type: '报警类型: 严重', time: '2026-05-05', level: 'severe' },
-        { deviceName: '设备名称: 000472604726672', code: '100472600', type: '报警类型: 中等', time: '2026-05-05', level: 'medium' },
-        { deviceName: '设备名称: 000472604726672', code: '100472600', type: '报警类型: 一般', time: '2026-05-05', level: 'normal' },
-        { deviceName: '设备名称: 000472604726672', code: '100472600', type: '报警类型: 严重', time: '2026-05-05', level: 'severe' },
-        { deviceName: '设备名称: 000472604726672', code: '100472600', type: '报警类型: 中等', time: '2026-05-05', level: 'medium' },
-        { deviceName: '设备名称: 000472604726672', code: '100472600', type: '报警类型: 一般', time: '2026-05-05', level: 'normal' }
-      ]
+      alarmList: []
+    }
+  },
+  created() {
+    this.fetchAlarmList()
+  },
+  methods: {
+    async fetchAlarmList() {
+      try {
+        const res = await getAlarmRecords()
+        // 映射接口返回的字段
+        this.alarmList = res.map(item => {
+          return {
+            deviceName: `设备名称: ${item.deviceName}`,
+            deviceIp: item.deviceIp,
+            type: `报警类型: ${this.translateAlarmType(item.alarmType)}`,
+            time: item.alarmTime ? item.alarmTime.replace('T', ' ') : '',
+            level: this.getAlarmLevel(item)
+          }
+        })
+      } catch (error) {
+        console.error('获取报警记录失败，使用 Mock 数据展示:', error)
+        // 调试用：如果接口未就绪，使用 Mock 数据
+        const mockData = [
+          {
+            "id": 4002,
+            "projectId": 1001,
+            "deviceInfoId": 3005,
+            "deviceName": "配电房热成像",
+            "deviceIp": "192.168.1.20",
+            "alarmType": "temperature",
+            "alarmDesc": "配电房设备温度异常",
+            "temperature": 82.1,
+            "alarmTime": "2026-05-18T09:15:00",
+            "createTime": "2026-05-19T23:03:21",
+            "deleted": 0
+          },
+          {
+            "id": 4003,
+            "projectId": 1001,
+            "deviceInfoId": 3006,
+            "deviceName": "正门监控",
+            "deviceIp": "192.168.1.21",
+            "alarmType": "motion",
+            "alarmDesc": "区域入侵报警",
+            "alarmTime": "2026-05-18T10:30:00",
+            "createTime": "2026-05-19T23:03:21",
+            "deleted": 0
+          }
+        ]
+        this.alarmList = mockData.map(item => ({
+          deviceName: `设备名称: ${item.deviceName}`,
+          deviceIp: item.deviceIp,
+          type: `报警类型: ${this.translateAlarmType(item.alarmType)}`,
+          time: item.alarmTime ? item.alarmTime.replace('T', ' ') : '',
+          level: this.getAlarmLevel(item)
+        }))
+      }
+    },
+    translateAlarmType(type) {
+      const typeMap = {
+        'temperature': '温度异常',
+        'motion': '移动侦测',
+        'fire': '烟火报警',
+        'offline': '设备离线'
+      }
+      return typeMap[type] || type
+    },
+    getAlarmLevel(item) {
+      // 根据类型或数值判断等级
+      if (item.alarmType === 'temperature' && item.temperature > 80) return 'severe'
+      if (item.alarmType === 'fire') return 'severe'
+      if (item.alarmType === 'offline') return 'medium'
+      return 'normal'
     }
   }
 }
@@ -175,7 +234,8 @@ export default {
   }
 }
 
-.alarm-code, .alarm-time {
+.alarm-code,
+.alarm-time {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.6);
 }

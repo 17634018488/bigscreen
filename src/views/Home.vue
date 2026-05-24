@@ -87,15 +87,48 @@ export default {
           const lnglat = new window.T.LngLat(project.longitude, project.latitude)
           const marker = new window.T.Marker(lnglat)
           
-          // 添加信息窗口
-          const content = `
-            <div style="color:#000;padding:10px;">
-              <h4 style="margin:0 0 5px 0;">${project.name}</h4>
-              <p style="margin:0;font-size:12px;">状态: ${project.status}</p>
-              <p style="margin:0;font-size:12px;">单位: ${project.constructionUnit}</p>
+          // 创建信息窗口内容
+          const contentDom = document.createElement('div')
+          contentDom.style.color = '#333'
+          contentDom.style.padding = '5px'
+          contentDom.style.minWidth = '200px'
+          contentDom.innerHTML = `
+            <h4 style="margin:0 0 8px 0;color:#1890ff;font-size:16px;">${project.name}</h4>
+            <div style="margin-bottom:4px;font-size:13px;">
+              <span style="color:#666;">状态:</span> 
+              <span style="color:${project.status === 'active' ? '#52c41a' : '#faad14'}">${this.formatStatus(project.status)}</span>
+            </div>
+            <div style="margin-bottom:10px;font-size:13px;">
+              <span style="color:#666;">单位:</span> ${project.constructionUnit}
+            </div>
+            <div style="text-align:right;">
+              <button class="detail-btn" style="
+                background:#1890ff;
+                color:#fff;
+                border:none;
+                padding:4px 12px;
+                border-radius:4px;
+                cursor:pointer;
+                font-size:12px;
+                transition:all 0.3s;
+              ">查看详情</button>
             </div>
           `
-          const infoWindow = new window.T.InfoWindow(content, { offset: new window.T.Point(0, -30) })
+          
+          // 为按钮绑定跳转事件
+          const btn = contentDom.querySelector('.detail-btn')
+          btn.onclick = (e) => {
+            e.stopPropagation()
+            this.$router.push({
+              name: 'ProjectDetail',
+              params: { id: project.id }
+            })
+          }
+          btn.onmouseover = () => { btn.style.background = '#40a9ff' }
+          btn.onmouseout = () => { btn.style.background = '#1890ff' }
+
+          const infoWindow = new window.T.InfoWindow(contentDom, { offset: new window.T.Point(0, -30) })
+          
           marker.addEventListener('click', () => {
             marker.openInfoWindow(infoWindow)
           })
@@ -110,6 +143,15 @@ export default {
       if (points.length > 0) {
         this.map.setViewport(points)
       }
+    },
+
+    formatStatus(status) {
+      const statusMap = {
+        'active': '进行中',
+        'planning': '规划中',
+        'completed': '已完成'
+      }
+      return statusMap[status] || status
     },
 
     initMap () {
