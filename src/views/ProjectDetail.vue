@@ -105,13 +105,7 @@
             <el-tab-pane label="实时预览" name="preview">
               <div class="preview-container">
                 <div class="player-wrapper">
-                  <video 
-                    v-show="isStreaming" 
-                    ref="videoPlayer" 
-                    class="video-player"
-                    muted
-                    autoplay
-                  ></video>
+                  <video v-show="isStreaming" ref="videoPlayer" class="video-player" muted autoplay></video>
                   <div v-if="!isStreaming" class="mock-player">
                     <i class="el-icon-video-camera"></i>
                     <span>{{ isLoggedIn ? '登录成功，点击“预览”开始播放' : '点击“登录设备”预览' }}</span>
@@ -119,11 +113,17 @@
                 </div>
                 <div class="preview-controls-panel">
                   <div class="button-group">
-                    <el-button type="primary" size="mini" icon="el-icon-user" @click="handleLogin" :disabled="isLoggedIn" :loading="loginLoading">{{ isLoggedIn ? '已登录' : (loginLoading ? '登录中...' : '登录') }}</el-button>
-                    <el-button type="success" size="mini" icon="el-icon-video-play" @click="handlePlay" :disabled="!isLoggedIn">预览</el-button>
-                    <el-button type="danger" size="mini" icon="el-icon-video-pause" @click="handleStop" :disabled="!isLoggedIn">停止</el-button>
-                    <el-button type="warning" size="mini" icon="el-icon-camera" @click="handleCapture" :disabled="!isLoggedIn" style="background-color: #722ed1; border-color: #722ed1;">抓拍</el-button>
-                    <el-button type="warning" size="mini" icon="el-icon-mic" @click="handleIntercom" :disabled="!isLoggedIn" style="background-color: #fa8c16; border-color: #fa8c16;">布防</el-button>
+                    <el-button type="primary" size="mini" icon="el-icon-user" @click="handleLogin"
+                      :disabled="isLoggedIn" :loading="loginLoading">{{ isLoggedIn ? '已登录' : (loginLoading ? '登录中...' :
+                        '登录') }}</el-button>
+                    <el-button type="success" size="mini" icon="el-icon-video-play" @click="handlePlay"
+                      :disabled="!isLoggedIn">预览</el-button>
+                    <el-button type="danger" size="mini" icon="el-icon-video-pause" @click="handleStop"
+                      :disabled="!isLoggedIn">停止</el-button>
+                    <el-button type="warning" size="mini" icon="el-icon-camera" @click="handleCapture"
+                      :disabled="!isLoggedIn" style="background-color: #722ed1; border-color: #722ed1;">抓拍</el-button>
+                    <el-button type="warning" size="mini" icon="el-icon-mic" @click="handleIntercom"
+                      :disabled="!isLoggedIn" style="background-color: #fa8c16; border-color: #fa8c16;">布防</el-button>
                   </div>
                   <div v-if="selectedDevice" class="connection-info">
                     设备: {{ selectedDevice.ip }}:{{ selectedDevice.port }}
@@ -132,18 +132,45 @@
               </div>
             </el-tab-pane>
             <el-tab-pane label="告警" name="alarm">
-              <el-table :data="alarms" style="width: 100%" class="alarm-table">
-                <el-table-column prop="time" label="时间" width="180"></el-table-column>
-                <el-table-column prop="type" label="类型" width="120"></el-table-column>
-                <el-table-column prop="content" label="告警内容"></el-table-column>
-                <el-table-column prop="status" label="状态" width="100">
-                  <template slot-scope="scope">
-                    <el-tag :type="scope.row.status === 'unhandled' ? 'danger' : 'success'" size="mini">
-                      {{ scope.row.status === 'unhandled' ? '未处理' : '已处理' }}
-                    </el-tag>
-                  </template>
-                </el-table-column>
-              </el-table>
+              <div class="alarm-tab-container">
+                <div class="alarm-toolbar">
+                  <div class="filter-left">
+                    <el-date-picker v-model="filterDate" type="date" placeholder="选择日期" size="mini"
+                      value-format="yyyy-MM-dd" class="dark-picker"></el-date-picker>
+                    <el-select v-model="filterType" placeholder="全部类型" size="mini" class="dark-select">
+                      <el-option label="全部类型" value=""></el-option>
+                      <el-option v-for="type in deviceTypes" :key="type.id" :label="type.name"
+                        :value="type.name"></el-option>
+                    </el-select>
+                    <el-button type="primary" size="mini" icon="el-icon-search" @click="fetchAlarms">查询</el-button>
+                    <el-button type="danger" size="mini" icon="el-icon-delete" @click="clearAlarms">清空实时</el-button>
+                  </div>
+                  <div class="filter-right">
+                    <span class="stat-tag tag-red">0</span>
+                    <span class="stat-tag tag-yellow">0</span>
+                    <span class="stat-tag tag-purple">0</span>
+                  </div>
+                </div>
+
+                <div class="alarm-table-wrapper">
+                  <el-table v-if="alarms.length > 0" :data="alarms" style="width: 100%" class="alarm-table">
+                    <el-table-column prop="time" label="时间" width="180"></el-table-column>
+                    <el-table-column prop="type" label="类型" width="120"></el-table-column>
+                    <el-table-column prop="content" label="告警内容"></el-table-column>
+                    <el-table-column prop="status" label="状态" width="100">
+                      <template slot-scope="scope">
+                        <el-tag :type="scope.row.status === 'unhandled' ? 'danger' : 'success'" size="mini">
+                          {{ scope.row.status === 'unhandled' ? '未处理' : '已处理' }}
+                        </el-tag>
+                      </template>
+                    </el-table-column>
+                  </el-table>
+                  <div v-else class="empty-alarm">
+                    <i class="el-icon-info"></i>
+                    <span>无告警记录</span>
+                  </div>
+                </div>
+              </div>
             </el-tab-pane>
           </el-tabs>
         </section>
@@ -153,7 +180,7 @@
 </template>
 
 <script>
-import flvjs from 'flv.js'
+import Hls from 'hls.js'
 import { getProjectDetail, getProjectDeviceTypes, getProjectDeviceList, getAlarmRecords, loginDevice } from '@/api/project'
 
 export default {
@@ -171,14 +198,16 @@ export default {
       isLoggedIn: false,
       loginLoading: false,
       loginInfo: {},
-      flvPlayer: null,
-      isStreaming: false
+      isStreaming: false,
+      filterDate: new Date().toISOString().split('T')[0],
+      filterType: '',
+      hls: null
     }
   },
   created () {
     this.fetchData()
   },
-  beforeDestroy() {
+  beforeDestroy () {
     this.destroyPlayer()
   },
   computed: {
@@ -220,11 +249,10 @@ export default {
     },
     async fetchAlarms () {
       try {
-        const today = new Date()
-        const dateStr = today.toISOString().split('T')[0]
         const res = await getAlarmRecords({
-          date: dateStr,
-          projectId: this.id
+          date: this.filterDate,
+          projectId: this.id,
+          type: this.filterType
         })
         // 映射后端字段到前端展示字段，如果后端返回的已经是 time, type, content, status 则直接赋值
         this.alarms = (res || []).map(item => ({
@@ -236,6 +264,10 @@ export default {
       } catch (error) {
         console.error('获取告警记录失败:', error)
       }
+    },
+    clearAlarms () {
+      this.alarms = []
+      this.$message.info('实时告警已清空')
     },
     async selectType (type) {
       this.selectedTypeId = type.id
@@ -264,29 +296,31 @@ export default {
       const type = this.deviceTypes.find(t => t.id === typeId)
       return type ? type.name : (this.deviceTypes.find(t => t.id === this.selectedTypeId)?.name || '未知类型')
     },
-    async handleLogin() {
-       if (!this.selectedDevice) return
-       
-       this.loginLoading = true
-       try {
-         const formData = new FormData()
-         formData.append('ip', this.selectedDevice.ip)
-         formData.append('port', this.selectedDevice.port)
-         formData.append('username', this.selectedDevice.username)
-         formData.append('password', this.selectedDevice.password)
-         
-         const res = await loginDevice(formData)
-         this.$message.success(`设备登录成功: ${this.selectedDevice.ip}`)
-         this.isLoggedIn = true
-         this.loginInfo = res || {}
-       } catch (error) {
+    async handleLogin () {
+      if (!this.selectedDevice) return
+
+      this.loginLoading = true
+      try {
+        const formData = new FormData()
+        formData.append('ip', this.selectedDevice.ip)
+        formData.append('port', this.selectedDevice.port)
+        formData.append('username', this.selectedDevice.username)
+        formData.append('password', this.selectedDevice.password)
+
+        const res = await loginDevice(formData)
+        this.$message.success(`设备登录成功: ${this.selectedDevice.ip}`)
+        this.isLoggedIn = true
+        this.loginInfo = res || {}
+      } catch (error) {
         console.error('设备登录失败:', error)
         this.$message.error('设备登录失败，请检查网络或配置')
       } finally {
         this.loginLoading = false
       }
     },
-    handlePlay() {
+    handlePlay () {
+      // 模拟地址
+      this.loginInfo.url = "http://127.0.0.1:9527/hls/camera1.m3u8"
       if (!this.loginInfo || !this.loginInfo.url) {
         this.$message.error('未获取到有效的播放流地址')
         return
@@ -294,49 +328,74 @@ export default {
 
       this.destroyPlayer() // 播放前先清理
 
-      if (flvjs.isSupported()) {
-        const videoElement = this.$refs.videoPlayer
-        this.flvPlayer = flvjs.createPlayer({
-          type: 'flv', // 或者根据 loginInfo 中的地址后缀判断
-          isLive: true,
-          url: this.loginInfo.url
-        })
-        this.flvPlayer.attachMediaElement(videoElement)
-        this.flvPlayer.load()
-        this.flvPlayer.play().then(() => {
-          this.isStreaming = true
-          this.$message.success('开始播放实时视频流')
-        }).catch(err => {
-          console.error('播放失败:', err)
-          this.$message.error('视频播放失败，请重试')
+      const videoElement = this.$refs.videoPlayer
+      const streamUrl = this.loginInfo.url
+
+      if (Hls.isSupported()) {
+        this.hls = new Hls()
+        this.hls.loadSource(streamUrl)
+        this.hls.attachMedia(videoElement)
+        this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          videoElement.play().then(() => {
+            this.isStreaming = true
+            this.$message.success('开始播放 HLS 直播流')
+          }).catch(err => {
+            console.error('播放失败:', err)
+            this.$message.error('视频播放失败，请重试')
+          })
         })
 
-        this.flvPlayer.on(flvjs.Events.ERROR, (errType, errDetail) => {
-          console.error('FLV 播放器错误:', errType, errDetail)
-          this.destroyPlayer()
+        this.hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                console.error('网络错误:', data)
+                this.$message.error('网络错误，尝试重新连接...')
+                this.hls.startLoad()
+                break
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                console.error('媒体内容错误:', data)
+                this.hls.recoverMediaError()
+                break
+              default:
+                this.destroyPlayer()
+                break
+            }
+          }
+        })
+      } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+        // 原生支持 HLS (如 Safari)
+        videoElement.src = streamUrl
+        videoElement.addEventListener('loadedmetadata', () => {
+          videoElement.play()
+          this.isStreaming = true
+          this.$message.success('开始播放 HLS 直播流 (原生)')
         })
       } else {
-        this.$message.error('当前浏览器不支持 FLV 播放')
+        this.$message.error('当前浏览器不支持 HLS 播放')
       }
     },
-    handleStop() {
+    handleStop () {
       this.destroyPlayer()
-      this.$message.warning(`停止预览`)
+      this.$message.warning('停止预览')
     },
-    destroyPlayer() {
-      if (this.flvPlayer) {
-        this.flvPlayer.pause()
-        this.flvPlayer.unload()
-        this.flvPlayer.detachMediaElement()
-        this.flvPlayer.destroy()
-        this.flvPlayer = null
+    destroyPlayer () {
+      if (this.hls) {
+        this.hls.destroy()
+        this.hls = null
+      }
+      const videoElement = this.$refs.videoPlayer
+      if (videoElement) {
+        videoElement.pause()
+        videoElement.src = ''
+        videoElement.load()
       }
       this.isStreaming = false
     },
-    handleCapture() {
+    handleCapture () {
       this.$message.success(`抓拍成功，已保存至本地`)
     },
-    handleIntercom() {
+    handleIntercom () {
       this.$message.info(`正在开启语音对讲...`)
     }
   }
@@ -659,10 +718,21 @@ export default {
         padding: 7px 15px;
         font-size: 12px;
         border-radius: 4px;
-        
-        &--primary { background-color: #1890ff; border-color: #1890ff; }
-        &--success { background-color: #52c41a; border-color: #52c41a; }
-        &--danger { background-color: #ff4d4f; border-color: #ff4d4f; }
+
+        &--primary {
+          background-color: #1890ff;
+          border-color: #1890ff;
+        }
+
+        &--success {
+          background-color: #52c41a;
+          border-color: #52c41a;
+        }
+
+        &--danger {
+          background-color: #ff4d4f;
+          border-color: #ff4d4f;
+        }
       }
     }
 
@@ -670,6 +740,89 @@ export default {
       font-size: 12px;
       color: rgba(255, 255, 255, 0.5);
       font-family: monospace;
+    }
+  }
+}
+
+.alarm-tab-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 15px;
+}
+
+.alarm-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+
+  .filter-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    .dark-picker,
+    .dark-select {
+      width: 150px;
+
+      ::v-deep .el-input__inner {
+        background-color: rgba(0, 21, 41, 0.8);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #fff;
+      }
+    }
+  }
+
+  .filter-right {
+    display: flex;
+    gap: 8px;
+
+    .stat-tag {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+      text-align: center;
+      border-radius: 50%;
+      font-size: 12px;
+      color: #fff;
+      font-weight: bold;
+
+      &.tag-red {
+        background-color: #ff4d4f;
+      }
+
+      &.tag-yellow {
+        background-color: #faad14;
+      }
+
+      &.tag-purple {
+        background-color: #722ed1;
+      }
+    }
+  }
+}
+
+.alarm-table-wrapper {
+  flex: 1;
+  min-height: 200px;
+  position: relative;
+
+  .empty-alarm {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 14px;
+
+    i {
+      font-size: 40px;
     }
   }
 }
@@ -696,6 +849,14 @@ export default {
 
     td {
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .el-table__empty-block {
+      background: transparent;
+
+      .el-table__empty-text {
+        color: rgba(255, 255, 255, 0.3);
+      }
     }
   }
 }
