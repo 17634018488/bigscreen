@@ -61,6 +61,9 @@ export function loginDevice(data) {
   return request({
     url: '/device/login',
     method: 'post',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
     data
   })
 }

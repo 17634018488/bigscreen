@@ -265,20 +265,21 @@ export default {
       return type ? type.name : (this.deviceTypes.find(t => t.id === this.selectedTypeId)?.name || '未知类型')
     },
     async handleLogin() {
-      if (!this.selectedDevice) return
-      
-      this.loginLoading = true
-      try {
-        const res = await loginDevice({
-          ip: this.selectedDevice.ip,
-          port: this.selectedDevice.port,
-          username: this.selectedDevice.username,
-          password: this.selectedDevice.password
-        })
-        this.$message.success(`设备登录成功: ${this.selectedDevice.ip}`)
-        this.isLoggedIn = true
-        this.loginInfo = res || {}
-      } catch (error) {
+       if (!this.selectedDevice) return
+       
+       this.loginLoading = true
+       try {
+         const formData = new FormData()
+         formData.append('ip', this.selectedDevice.ip)
+         formData.append('port', this.selectedDevice.port)
+         formData.append('username', this.selectedDevice.username)
+         formData.append('password', this.selectedDevice.password)
+         
+         const res = await loginDevice(formData)
+         this.$message.success(`设备登录成功: ${this.selectedDevice.ip}`)
+         this.isLoggedIn = true
+         this.loginInfo = res || {}
+       } catch (error) {
         console.error('设备登录失败:', error)
         this.$message.error('设备登录失败，请检查网络或配置')
       } finally {
