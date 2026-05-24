@@ -431,7 +431,7 @@ export default {
       this.armLoading = true
       try {
         const formData = new FormData()
-        formData.append('deviceId', this.selectedDevice.ip + this.selectedDevice.port)
+        formData.append('deviceId', this.selectedDevice.ip + ':' + this.selectedDevice.port)
 
         if (this.isArmed) {
           await stopAlarm(formData)
