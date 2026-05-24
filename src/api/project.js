@@ -67,3 +67,35 @@ export function loginDevice(data) {
     data
   })
 }
+
+/**
+ * 开启布防
+ * @param {Object} data { ip, port, username, password }
+ * @returns {Promise}
+ */
+export function startAlarm(data) {
+  return request({
+    url: '/alarm/start',
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    data
+  })
+}
+
+/**
+ * 停止布防 (撤防)
+ * @param {Object} data { ip, port, username, password }
+ * @returns {Promise}
+ */
+export function stopAlarm(data) {
+  return request({
+    url: '/alarm/stop',
+    method: 'post',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    data
+  })
+}

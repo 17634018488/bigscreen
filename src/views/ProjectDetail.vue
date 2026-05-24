@@ -119,11 +119,17 @@
                     <el-button type="success" size="mini" icon="el-icon-video-play" @click="handlePlay"
                       :disabled="!isLoggedIn">预览</el-button>
                     <el-button type="danger" size="mini" icon="el-icon-video-pause" @click="handleStop"
-                      :disabled="!isLoggedIn">停止</el-button>
+                      :disabled="!isLoggedIn || !isStreaming">停止</el-button>
                     <el-button type="warning" size="mini" icon="el-icon-camera" @click="handleCapture"
                       :disabled="!isLoggedIn" style="background-color: #722ed1; border-color: #722ed1;">抓拍</el-button>
-                    <el-button type="warning" size="mini" icon="el-icon-mic" @click="handleIntercom"
-                      :disabled="!isLoggedIn" style="background-color: #fa8c16; border-color: #fa8c16;">布防</el-button>
+                    <el-button :type="isArmed ? 'info' : 'warning'" size="mini"
+                      :icon="isArmed ? 'el-icon-lock' : 'el-icon-unlock'" @click="handleAlarmToggle"
+                      :disabled="!isLoggedIn" :loading="armLoading" :style="{
+                        backgroundColor: isArmed ? '#909399' : '#fa8c16',
+                        borderColor: isArmed ? '#909399' : '#fa8c16'
+                      }">
+                      {{ isArmed ? '撤防' : '布防' }}
+                    </el-button>
                   </div>
                   <div v-if="selectedDevice" class="connection-info">
                     设备: {{ selectedDevice.ip }}:{{ selectedDevice.port }}
@@ -152,19 +158,23 @@
                   </div>
                 </div>
 
-                <div class="alarm-table-wrapper">
-                  <el-table v-if="alarms.length > 0" :data="alarms" style="width: 100%" class="alarm-table">
-                    <el-table-column prop="time" label="时间" width="180"></el-table-column>
-                    <el-table-column prop="type" label="类型" width="120"></el-table-column>
-                    <el-table-column prop="content" label="告警内容"></el-table-column>
-                    <el-table-column prop="status" label="状态" width="100">
-                      <template slot-scope="scope">
-                        <el-tag :type="scope.row.status === 'unhandled' ? 'danger' : 'success'" size="mini">
-                          {{ scope.row.status === 'unhandled' ? '未处理' : '已处理' }}
-                        </el-tag>
-                      </template>
-                    </el-table-column>
-                  </el-table>
+                <div class="alarm-list-content">
+                  <div v-if="alarms.length > 0">
+                    <div v-for="(alarm, index) in alarms" :key="index" class="alarm-card-item">
+                      <div class="alarm-card-left">
+                        <div class="alarm-icon-box">
+                          <i class="el-icon-warning" :style="{ color: getAlarmColor(alarm.type) }"></i>
+                        </div>
+                        <div class="alarm-info-box">
+                          <div class="alarm-title" :style="{ color: getAlarmColor(alarm.type) }">{{ alarm.type }}</div>
+                          <div class="alarm-subtitle">{{ alarm.content }} - {{ alarm.deviceIp }}</div>
+                        </div>
+                      </div>
+                      <div class="alarm-card-right">
+                        <span class="alarm-time-text">{{ alarm.time }}</span>
+                      </div>
+                    </div>
+                  </div>
                   <div v-else class="empty-alarm">
                     <i class="el-icon-info"></i>
                     <span>无告警记录</span>
@@ -181,7 +191,7 @@
 
 <script>
 import Hls from 'hls.js'
-import { getProjectDetail, getProjectDeviceTypes, getProjectDeviceList, getAlarmRecords, loginDevice } from '@/api/project'
+import { getProjectDetail, getProjectDeviceTypes, getProjectDeviceList, getAlarmRecords, loginDevice, startAlarm, stopAlarm } from '@/api/project'
 
 export default {
   name: 'ProjectDetail',
@@ -197,6 +207,8 @@ export default {
       alarms: [],
       isLoggedIn: false,
       loginLoading: false,
+      armLoading: false,
+      isArmed: false,
       loginInfo: {},
       isStreaming: false,
       filterDate: new Date().toISOString().split('T')[0],
@@ -254,16 +266,32 @@ export default {
           projectId: this.id,
           type: this.filterType
         })
-        // 映射后端字段到前端展示字段，如果后端返回的已经是 time, type, content, status 则直接赋值
+        // 映射后端字段到前端展示字段
         this.alarms = (res || []).map(item => ({
-          time: item.createTime || item.time || '',
-          type: item.alarmType || item.type || '未知告警',
-          content: item.description || item.content || '',
+          time: (item.createTime || item.alarmTime || '').replace('T', ' '),
+          type: this.translateAlarmType(item.alarmType || item.type || '未知告警'),
+          content: item.alarmDesc || item.content || '告警描述',
+          deviceIp: item.deviceIp || '127.0.0.1',
           status: item.status || 'unhandled'
         }))
       } catch (error) {
         console.error('获取告警记录失败:', error)
       }
+    },
+    translateAlarmType(type) {
+      const typeMap = {
+        'temperature': '温度异常',
+        'motion': '移动侦测',
+        'fire': '火焰报警',
+        'smoke': '烟雾报警',
+        'offline': '设备离线'
+      }
+      return typeMap[type] || type
+    },
+    getAlarmColor(type) {
+      if (type.includes('火') || type.includes('烟') || type.includes('温度')) return '#ff4d4f'
+      if (type.includes('离线')) return '#909399'
+      return '#faad14'
     },
     clearAlarms () {
       this.alarms = []
@@ -272,6 +300,7 @@ export default {
     async selectType (type) {
       this.selectedTypeId = type.id
       this.isLoggedIn = false
+      this.isArmed = false
       this.destroyPlayer()
       try {
         const res = await getProjectDeviceList(type.id)
@@ -290,6 +319,7 @@ export default {
     selectDevice (device) {
       this.selectedDeviceId = device.id
       this.isLoggedIn = false
+      this.isArmed = false
       this.destroyPlayer()
     },
     getDeviceTypeName (typeId) {
@@ -394,6 +424,30 @@ export default {
     },
     handleCapture () {
       this.$message.success(`抓拍成功，已保存至本地`)
+    },
+    async handleAlarmToggle () {
+      if (!this.selectedDevice) return
+
+      this.armLoading = true
+      try {
+        const formData = new FormData()
+        formData.append('deviceId', this.selectedDevice.ip + this.selectedDevice.port)
+
+        if (this.isArmed) {
+          await stopAlarm(formData)
+          this.$message.success('撤防成功')
+          this.isArmed = false
+        } else {
+          await startAlarm(formData)
+          this.$message.success('布防成功')
+          this.isArmed = true
+        }
+      } catch (error) {
+        console.error('操作失败:', error)
+        this.$message.error(`${this.isArmed ? '撤防' : '布防'}失败，请重试`)
+      } finally {
+        this.armLoading = false
+      }
     },
     handleIntercom () {
       this.$message.info(`正在开启语音对讲...`)
@@ -804,59 +858,79 @@ export default {
   }
 }
 
-.alarm-table-wrapper {
+.alarm-list-content {
   flex: 1;
+  overflow-y: auto;
   min-height: 200px;
-  position: relative;
+  padding-right: 5px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+  }
+
+  .alarm-card-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: rgba(255, 77, 79, 0.05);
+    border-left: 3px solid #ff4d4f;
+    margin-bottom: 10px;
+    border-radius: 2px;
+    transition: all 0.3s;
+
+    &:hover {
+      background: rgba(255, 77, 79, 0.1);
+    }
+
+    .alarm-card-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+
+      .alarm-icon-box {
+        i {
+          font-size: 20px;
+        }
+      }
+
+      .alarm-info-box {
+        .alarm-title {
+          font-size: 14px;
+          font-weight: bold;
+          margin-bottom: 4px;
+        }
+
+        .alarm-subtitle {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.6);
+        }
+      }
+    }
+
+    .alarm-card-right {
+      .alarm-time-text {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.4);
+      }
+    }
+  }
 
   .empty-alarm {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    justify-content: center;
+    height: 100%;
     color: rgba(255, 255, 255, 0.3);
-    font-size: 14px;
+    gap: 10px;
 
     i {
       font-size: 40px;
-    }
-  }
-}
-
-.alarm-table {
-  background: transparent !important;
-  color: #fff !important;
-
-  ::v-deep {
-    .el-table__header-wrapper th {
-      background-color: rgba(255, 255, 255, 0.05);
-      color: rgba(255, 255, 255, 0.7);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .el-table__row {
-      background-color: transparent;
-      color: rgba(255, 255, 255, 0.8);
-
-      &:hover td {
-        background-color: rgba(24, 144, 255, 0.1) !important;
-      }
-    }
-
-    td {
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .el-table__empty-block {
-      background: transparent;
-
-      .el-table__empty-text {
-        color: rgba(255, 255, 255, 0.3);
-      }
     }
   }
 }
