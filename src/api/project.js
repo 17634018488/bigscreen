@@ -6,7 +6,7 @@ import request from '@/utils/request'
  */
 export function getProjects() {
   return request({
-    url: '/api/projects',
+    url: '/projects',
     method: 'get'
   })
 }
